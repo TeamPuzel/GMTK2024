@@ -1,0 +1,7 @@
+.DS_Store
+.build
+.swiftpm
+.vscode
+build
+assets/include/assets.h
+assets/assets.c
