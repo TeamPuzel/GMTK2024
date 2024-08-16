@@ -17,6 +17,12 @@ struct Environment {
     @_extern(c) @_extern(wasm, module: "env", name: "getMouseY")
     static func getMouseY() -> Int
     
+    @_extern(c) @_extern(wasm, module: "env", name: "getMouseLeft")
+    static func getMouseLeft() -> Bool
+    
+    @_extern(c) @_extern(wasm, module: "env", name: "getMouseRight")
+    static func getMouseRight() -> Bool
+    
     @_extern(c) @_extern(wasm, module: "env", name: "log")
     static func log(string: UnsafePointer<CChar>, count: Int)
     
@@ -63,10 +69,10 @@ internal func resume() {
     
     // TODO(!): Timestamp
     
-    let mouseX = Environment.getMouseX()
-    let mouseY = Environment.getMouseY()
-    input.mouse!.x = mouseX
-    input.mouse!.y = mouseY
+    input.mouse!.x = Environment.getMouseX()
+    input.mouse!.y = Environment.getMouseY()
+    input.mouse!.left = Environment.getMouseLeft()
+    input.mouse!.right = Environment.getMouseRight()
     
     instance.frame(input: input, target: &target)
     

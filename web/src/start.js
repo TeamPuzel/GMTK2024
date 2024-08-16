@@ -238,8 +238,8 @@ const env = {
     getAvailableHeight,
     getMouseX,
     getMouseY,
-    isMouseLeftPressed,
-    isMouseRightPressed,
+    getMouseLeft,
+    getMouseRight,
     timestamp
 }
 
@@ -275,8 +275,8 @@ function getAvailableHeight() {
 
 function getMouseX() { return mouseX }
 function getMouseY() { return mouseY }
-function isMouseLeftPressed() { return mouseLeft }
-function isMouseRightPressed() { return mouseRight }
+function getMouseLeft() { return mouseLeft }
+function getMouseRight() { return mouseRight }
 
 function random() { return Math.random() }
 
