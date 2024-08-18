@@ -19,7 +19,6 @@ public struct Input: Sendable {
     }
     
     public var keys: Set<Key> = []
-    public var modifiers: Set<Modifier> = []
     
     public init() {}
     
@@ -91,22 +90,22 @@ public struct Input: Sendable {
         }
     }
     
-    public struct Modifier: Hashable, Sendable, BitwiseCopyable {
-        public var tag: Tag
-        public var isRepeated: Bool
-        
-        public func hash(into hasher: inout Hasher) { tag.hash(into: &hasher) }
-        
-        public init(tag: Tag, isRepeated: Bool) {
-            self.tag = tag
-            self.isRepeated = isRepeated
-        }
-        
-        public enum Tag: Hashable, Sendable, BitwiseCopyable {
-            case a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z
-            case A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
-        }
-    }
+//    public struct Modifier: Hashable, Sendable, BitwiseCopyable {
+//        public var tag: Tag
+//        public var isRepeated: Bool
+//        
+//        public func hash(into hasher: inout Hasher) { tag.hash(into: &hasher) }
+//        
+//        public init(tag: Tag, isRepeated: Bool) {
+//            self.tag = tag
+//            self.isRepeated = isRepeated
+//        }
+//        
+//        public enum Tag: Hashable, Sendable, BitwiseCopyable {
+//            case a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z
+//            case A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
+//        }
+//    }
 }
 
 // MARK: - Time

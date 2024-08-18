@@ -266,6 +266,11 @@ public extension Drawable {
     func colorMap(_ existing: Color, to new: Color) -> ColorMap<Self> {
         self.colorMap { $0 == existing ? new : $0 }
     }
+    
+    /// Shorthand for a color map from a color matching a predicate to another.
+    func colorMap(to new: Color, where predicate: @escaping (Color) -> Bool) -> ColorMap<Self> {
+        self.colorMap { predicate($0) ? new : $0 }
+    }
 }
 
 /// A lazy wrapper around a drawable, applies a transform function to every color it yields.
@@ -445,6 +450,7 @@ public extension MutableDrawable {
     }
     
     // TODO(?): Slice the drawable before drawing it to avoid wasting time drawing offscreen.
+    @_disfavoredOverload
     mutating func draw(_ drawable: some Drawable, x: Int, y: Int, blendMode: Color.BlendMode = .normal) {
         for ix in 0..<drawable.width {
             for iy in 0..<drawable.height {
@@ -453,12 +459,21 @@ public extension MutableDrawable {
         }
     }
     
+    @_disfavoredOverload
     mutating func draw(_ drawable: some Drawable, blendMode: Color.BlendMode = .normal) {
         for ix in 0..<drawable.width {
             for iy in 0..<drawable.height {
                 self.pixel(drawable[ix, iy], x: ix, y: iy, blendMode: blendMode)
             }
         }
+    }
+    
+    mutating func draw(_ drawable: some OptimizedDrawable, x: Int, y: Int, blendMode: Color.BlendMode = .normal) {
+        drawable.draw(into: &self, x: x, y: y, blendMode: blendMode)
+    }
+    
+    mutating func draw(_ drawable: some OptimizedDrawable, blendMode: Color.BlendMode = .normal) {
+        drawable.draw(into: &self, x: 0, y: 0, blendMode: blendMode)
     }
     
     mutating func text(
@@ -480,7 +495,11 @@ public extension MutableDrawable {
         }
     }
     
-    @available(*, deprecated, message: "Might be removed in favor of a drawable")
+    mutating func line(x1: Int, y1: Int, x2: Int, y2: Int, color: Color = .white, blendMode: Color.BlendMode = .normal) {
+        fatalError()
+    }
+    
+    @available(*, deprecated, message: "Will be removed in favor of a OptimizedDrawable")
     mutating func rectangle(x: Int, y: Int, w: Int, h: Int, color: Color = .white, fill: Bool = false) {
         for ix in 0..<w {
             for iy in 0..<h {
@@ -491,7 +510,7 @@ public extension MutableDrawable {
         }
     }
     
-    @available(*, deprecated, message: "Might be removed in favor of a drawable")
+    @available(*, deprecated, message: "Will be removed in favor of OptimizedDrawable")
     mutating func circle(x: Int, y: Int, r: Int, color: Color = .white, fill: Bool = false) {
         guard r >= 0 else { return }
         for ix in (x - r)..<(x + r + 1) {
@@ -505,6 +524,14 @@ public extension MutableDrawable {
             }
         }
     }
+}
+
+// MARK: - Draw performance
+
+/// A drawable which knows a more optimal way to draw itself than copying every pixel individually.
+/// For instance, an empty drawable does not need to be drawn at all, or an unfilled rectangle can skip empty inner pixels.
+public protocol OptimizedDrawable: Drawable {
+    func draw(into other: inout some MutableDrawable, x: Int, y: Int, blendMode: Color.BlendMode)
 }
 
 // MARK: - Overlay
@@ -1007,20 +1034,39 @@ extension Text: Sendable {}
 
 // MARK: - Shapes
 
-public struct Rectangle: Drawable {
+public struct Rectangle: OptimizedDrawable {
     public let color: Color
     public let width: Int
     public let height: Int
+    public let fill: Bool
     
-    public init(width: Int, height: Int, color: Color = .white) {
+    public init(width: Int, height: Int, color: Color = .white, fill: Bool = true) {
         self.width = width
         self.height = height
         self.color = color
+        self.fill = fill
     }
     
     public subscript(x: Int, y: Int) -> Color {
-        assert(x < width && y < height && x >= 0 && y >= 0)
-        return color
+        precondition(x < width && y < height && x >= 0 && y >= 0)
+        return switch fill {
+            case true: color
+            case false where x == 0 || x == width - 1 || y == 0 || y == height - 1: color
+            case _: .clear
+        }
+//        return if fill { color }
+//        else if x == 0 || x == width - 1 || y == 0 || y == height - 1 { color }
+//        else { .clear }
+    }
+    
+    public func draw(into other: inout some MutableDrawable, x: Int, y: Int, blendMode: Color.BlendMode) {
+        for ix in 0..<width {
+            for iy in 0..<height {
+                if ix + x == x || ix + x == x + width - 1 || iy + y == y || iy + y == y + height - 1 || fill {
+                    other.pixel(color, x: ix + x, y: iy + y)
+                }
+            }
+        }
     }
 }
 

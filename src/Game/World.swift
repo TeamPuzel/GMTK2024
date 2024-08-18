@@ -51,7 +51,7 @@ final class Floor {
     
     init(_ world: World, depth: Int) {
         self.world = world
-        self.tiles = .init(repeating: Ground(), count: Self.width * Self.height)
+        self.tiles = (0..<Self.width * Self.height).map { _ in Ground() }
         self.entities = .init()
     }
     
@@ -80,11 +80,29 @@ class Tile: Drawable {
     final var height: Int { 16 }
     subscript(x: Int, y: Int) -> Color { .clear }
     
-    static let sheet: DrawableGrid<Image> = UnsafeTGAPointer(TILES_TGA).flatten().grid(itemWidth: 16, itemHeight: 16)
+    /// Color used for this tile on the minimap
+    var mapColor: Color { .clear }
+    
+    static let sheet: DrawableGrid<Image> = UnsafeTGAPointer(KENNEY_TGA).flatten().grid(itemWidth: 16, itemHeight: 16)
 }
 
 class Ground: Tile {
-    override subscript(x: Int, y: Int) -> Color { Self.sheet[4, 0][x, y] }
+    private let offset: Int = .random(in: 0...3)
+    private let transparency: Int = .random(in: 0...128)
+    
+    override subscript(x: Int, y: Int) -> Color {
+        Self.sheet[offset, 0]
+            .colorMap { [self] in
+                .init(
+                    r: $0.r,
+                    g: $0.g,
+                    b: $0.b,
+                    a: .init(clamping: Int($0.a) - transparency)
+                )
+            } [x, y]
+    }
+    
+    override var mapColor: Color { .Pico.brown }
 }
 
 class Wall: Tile {
