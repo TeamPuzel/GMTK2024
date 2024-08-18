@@ -14,6 +14,7 @@ let mouseX = 0
 let mouseY = 0
 let mouseLeft = false
 let mouseRight = false
+let mouseVisible = false
 
 /** 
  * @param { string } code
@@ -42,7 +43,7 @@ function parseKey(code) {
 
 async function main() {
     wasm = await WebAssembly.instantiateStreaming(
-        fetch("/game.wasm"),
+        fetch("game.wasm"),
         { env }
     )
     await run()
@@ -68,6 +69,17 @@ async function run() {
         const rect = surface.getBoundingClientRect()
         mouseX = Math.floor((event.pageX - rect.x) / 4)
         mouseY = Math.floor((event.pageY - rect.y) / 4)
+        mouseVisible = true // ???
+    })
+    
+    document.addEventListener("mouseout", (event) => {
+        // This is never called on Safari if the cursor leaves the window slowly.
+        // That's some quality programming...
+        mouseVisible = false
+    })
+    
+    document.addEventListener("mouseover", (event) => {
+        mouseVisible = true
     })
     
     surface.addEventListener("mousedown", (event) => {
@@ -159,17 +171,19 @@ async function run() {
     loop()
 }
 
+/** @type HTMLCanvasElement */
+const surface = document.getElementById("surface")
+
 function loop() {
     wasm.instance.exports.resume()
     
-    /** @type HTMLCanvasElement */
-    const surface = document.getElementById("surface")
     surface.width = displayWidth * 4
     surface.height = displayHeight * 4
     surface.style.width = "100vw"
     surface.style.height = "100vh"
     
     window.requestAnimationFrame(loop)
+    // setTimeout(loop, 33.3333333333)
 }
 
 // MARK: - Shaders
@@ -240,6 +254,7 @@ const env = {
     getMouseY,
     getMouseLeft,
     getMouseRight,
+    getMouseVisible,
     timestamp
 }
 
@@ -277,6 +292,7 @@ function getMouseX() { return mouseX }
 function getMouseY() { return mouseY }
 function getMouseLeft() { return mouseLeft }
 function getMouseRight() { return mouseRight }
+function getMouseVisible() { return mouseVisible }
 
 function random() { return Math.random() }
 

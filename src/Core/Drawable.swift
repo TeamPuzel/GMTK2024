@@ -8,7 +8,7 @@
 /// drawables would be unable to specialize their color representation and everything
 /// would suffer from significant performance loss.
 public struct Color: Hashable, Sendable, BitwiseCopyable {
-    public let r, g, b, a: UInt8
+    public var r, g, b, a: UInt8
     
     public init(r: UInt8, g: UInt8, b: UInt8, a: UInt8 = 255) {
         self.r = r
@@ -17,25 +17,48 @@ public struct Color: Hashable, Sendable, BitwiseCopyable {
         self.a = a
     }
     
-    public init(luminosity: UInt8, a: UInt8 = 255) {
+    public init(luminosity: UInt8, alpha: UInt8 = 255) {
         self.r = luminosity
         self.g = luminosity
         self.b = luminosity
-        self.a = a
+        self.a = alpha
     }
     
-    // TODO(!): This does nothing yet.
-    func blend(with other: Color, _ mode: BlendMode = .add) -> Color {
-        other
+    func blend(with other: Color, _ mode: BlendMode = .normal) -> Color {
+        mode.blend(self, with: other)
     }
     
     public enum BlendMode {
-        case add
-        case subtract
-        case multiply
-        case divide
+        case binary
+        case normal
+        
+        func blend(_ color: Color, with other: Color) -> Color {
+            switch self {
+                case .binary: binary(color, with: other)
+                case .normal: normal(color, with: other)
+            }
+        }
+        
+        private func binary(_ color: Color, with other: Color) -> Color {
+            other.a == 0 ? color : other
+        }
+        
+        private func normal(_ color: Color, with other: Color) -> Color {
+            let other: (r: Int, g: Int, b: Int, a: Int) = (r: Int(other.r), g: Int(other.g), b: Int(other.b), a: Int(other.a))
+            let color: (r: Int, g: Int, b: Int, a: Int) = (r: Int(color.r), g: Int(color.g), b: Int(color.b), a: Int(color.a))
+            let invA = 255 - other.a
+            
+            return Color(
+                r: UInt8((other.r * other.a + color.r * invA) / 255),
+                g: UInt8((other.g * other.a + color.g * invA) / 255),
+                b: UInt8((other.b * other.a + color.b * invA) / 255),
+                a: UInt8((other.a * other.a + color.a * invA) / 255)
+            )
+        }
     }
 }
+
+extension Color.BlendMode: Sendable {}
 
 extension Color {
     public static let clear = Self(r: 0, g: 0, b: 0, a: 0)
@@ -266,17 +289,19 @@ public struct ColorMap<Inner: Drawable>: Drawable {
 public struct ColorBlend<Foreground: Drawable, Background: Drawable>: Drawable {
     public let foreground: Foreground
     public let background: Background
+    public let mode: Color.BlendMode
     public var width: Int { background.width }
     public var height: Int { background.height }
     
-    public init(foreground: Foreground, background: Background) {
+    public init(_ mode: Color.BlendMode = .normal, foreground: Foreground, background: Background) {
         assert(foreground.width == background.width && foreground.height == background.height)
         self.foreground = foreground
         self.background = background
+        self.mode = mode
     }
     
     public subscript(x: Int, y: Int) -> Color {
-        background[x, y].blend(with: background[x, y])
+        background[x, y].blend(with: foreground[x, y], self.mode)
     }
 }
 
@@ -337,6 +362,16 @@ public struct ScaledDrawable<Inner: Drawable>: Drawable {
 
 extension ScaledDrawable: Sendable where Inner: Sendable {}
 
+// MARK: - Offsets
+
+//public extension Drawable {
+//    func offset(x: Int, y: Int) -> OffsetDrawable<Self> {  }
+//}
+//
+//public struct OffsetDrawable<Inner: Drawable> {
+//
+//}
+
 // MARK: - Fonts
 
 /// A basic tile font, wraps a `DrawableGrid` and provides a mapping of characters
@@ -385,6 +420,8 @@ public extension InfiniteDrawable {
 /// A `Drawable` which can be rendered into, derives useful rendering functionality.
 public protocol MutableDrawable: Drawable {
     subscript(x: Int, y: Int) -> Color { get set }
+    
+    mutating func pixel(_ color: Color, x: Int, y: Int, blendMode: Color.BlendMode)
 }
 
 public extension MutableDrawable {
@@ -394,28 +431,32 @@ public extension MutableDrawable {
     /// - It performs a safety check to avoid crashing on out of bounds.
     /// - It applies a blending function to the drawing operation.
     // TODO(!): Drop the safety check here and move it to `draw`
-    mutating func pixel(_ color: Color, x: Int, y: Int, blendMode: Color.BlendMode = .add) {
+    mutating func pixel(_ color: Color, x: Int, y: Int, blendMode: Color.BlendMode = .normal) {
         if x < 0 || y < 0 || x >= width || y >= height { return }
         self[x, y] = self[x, y].blend(with: color, blendMode)
     }
     
-    mutating func clear(with color: Color = .clear) {
+    mutating func clear(with color: Color = .clear, blendMode: Color.BlendMode = .normal) {
         for x in 0..<width {
             for y in 0..<height {
-                pixel(color, x: x, y: y)
+                pixel(color, x: x, y: y, blendMode: blendMode)
             }
         }
     }
     
-    // TODO(!): Slice the drawable before drawing it to avoid wasting time drawing offscreen.
-    mutating func draw(_ drawable: some Drawable, x: Int, y: Int) {
+    // TODO(?): Slice the drawable before drawing it to avoid wasting time drawing offscreen.
+    mutating func draw(_ drawable: some Drawable, x: Int, y: Int, blendMode: Color.BlendMode = .normal) {
         for ix in 0..<drawable.width {
             for iy in 0..<drawable.height {
-                // TODO(!): Handle opacity with blending modes. The blending api needs design.
-                let color = drawable[ix, iy]
-                if color.a == 255 {
-                    self.pixel(color, x: ix + x, y: iy + y)
-                }
+                self.pixel(drawable[ix, iy], x: ix + x, y: iy + y, blendMode: blendMode)
+            }
+        }
+    }
+    
+    mutating func draw(_ drawable: some Drawable, blendMode: Color.BlendMode = .normal) {
+        for ix in 0..<drawable.width {
+            for iy in 0..<drawable.height {
+                self.pixel(drawable[ix, iy], x: ix, y: iy, blendMode: blendMode)
             }
         }
     }
@@ -424,14 +465,16 @@ public extension MutableDrawable {
         _ string: String,
         x: Int, y: Int,
         color: Color = .white,
-        font: TileFont<some Drawable> = TileFonts.pico
+        font: TileFont<some Drawable> = TileFonts.pico,
+        blendMode: Color.BlendMode = .normal
     ) {
         for (i, char) in string.enumerated() {
             if let symbol = font[char] {
                 self.draw(
                     symbol.colorMap(.white, to: color),
                     x: x + (i * symbol.width + i * font.spacing),
-                    y: y
+                    y: y,
+                    blendMode: blendMode
                 )
             }
         }
@@ -463,6 +506,56 @@ public extension MutableDrawable {
         }
     }
 }
+
+// MARK: - Overlay
+
+public extension MutableDrawable {
+    /// Creates an overlay slice of the drawable.
+    func overlay(x: Int, y: Int) -> MutableDrawableOverlay {
+        .init(overlaying: self, x: x, y: y)
+    }
+    
+    @_transparent
+    mutating func withOverlay<E, Result>(
+        x: Int, y: Int, _ body: (_ overlay: inout MutableDrawableOverlay) throws(E) -> Result
+    ) throws(E) -> Result where E: Error {
+        var overlay = self.overlay(x: x, y: y)
+        let result = try body(&overlay)
+        self.draw(overlay)
+        return result
+    }
+}
+
+/// This type is analogus to a `Slice` for `Drawable`, in that it describes offset mutation. Since drawables are
+/// copyable value types it is impossible to make a safe `MutableSlice` that points to and mutates the original.
+/// Instead you create an empty overlay which accumulates a difference to be applied to the original.
+///
+/// - Warning: Never use this type as runtime `any MutableDrawable` because it will cut off the image. It must be
+/// able to use its customized `pixel` method which skips the usual bounds checking.
+public struct MutableDrawableOverlay: MutableDrawable {
+    private var inner: Image
+    public let x: Int
+    public let y: Int
+    public var width: Int { inner.width }
+    public var height: Int { inner.height }
+    
+    public init(overlaying source: some MutableDrawable, x: Int, y: Int) {
+        self.inner = Image(width: source.width, height: source.height)
+        self.x = x
+        self.y = y
+    }
+    
+    public subscript(x: Int, y: Int) -> Color {
+        get { inner[x, y] }
+        set { inner.pixel(newValue, x: x + self.x, y: y + self.y) }
+    }
+    
+    public mutating func pixel(_ color: Color, x: Int, y: Int, blendMode: Color.BlendMode = .normal) {
+        self[x, y] = color
+    }
+}
+
+extension MutableDrawableOverlay: Sendable {}
 
 // MARK: - Abstract
 
@@ -579,6 +672,12 @@ public struct Image: PrimitiveDrawable, MutableDrawable, Sendable {
         self.width = width
         self.height = height
         self.data = .init(repeating: color, count: width * height)
+    }
+    
+    public init() {
+        self.width = 0
+        self.height = 0
+        self.data = .init()
     }
     
     // TODO(!): Initialization can safely be skipped here.

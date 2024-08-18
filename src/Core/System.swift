@@ -5,7 +5,11 @@
 // TODO(!): This needs to be properly abstract to work across platforms.
 public struct Input: Sendable {
     public var mouse: Mouse? = nil { willSet { previousMouse = mouse } }
-    private var previousMouse: Mouse? = nil
+    public private(set) var previousMouse: Mouse? = nil
+    
+    public var leftClick: Bool { (mouse?.left ?? false) && !(previousMouse?.left ?? false) }
+    public var rightClick: Bool { (mouse?.right ?? false) && !(previousMouse?.right ?? false) }
+    
     public var relativeMouse: Mouse {
         return if case let (.some(mouse), .some(previousMouse)) = (mouse, previousMouse) {
             .init(x: mouse.x - previousMouse.x, y: mouse.y - previousMouse.y, left: mouse.left, right: mouse.right)
@@ -126,37 +130,40 @@ public struct Input: Sendable {
 //}
 //
 //#endif
-//
-//public struct Timer: ~Copyable {
-//    private var prevTime: Double = getTime()
-//    public init() {}
-//    
-//    public var elapsed: Double {
-//        (getTime() - prevTime) / 1000000 // Converting nano to milliseconds
-//    }
-//    
-//    @discardableResult
-//    public mutating func lap() -> Double {
-//        let elapsed = elapsed
-//        prevTime = getTime()
-//        return elapsed
-//    }
-//}
-//
-//public struct BufferedTimer: ~Copyable {
-//    public private(set) var inner: Timer = .init()
-//    private var buffer: [Double] = .init(repeating: 0, count: 360)
-//    public init() {}
-//    
-//    public var elapsed: Double { buffer.average() }
-//    
-//    @discardableResult
-//    public mutating func lap() -> Double {
-//        buffer.removeFirst()
-//        buffer.append(inner.lap())
-//        return elapsed
-//    }
-//}
+
+public protocol AnyTimer: ~Copyable {
+    var elapsed: Double { get }
+    mutating func lap() -> Double
+}
+
+public struct Timer: ~Copyable, AnyTimer {
+    private var prevTime: Double = getTime()
+    public init() {}
+    
+    public var elapsed: Double { (getTime() - prevTime) / 1000000 } // Converting nano to milliseconds
+    
+    @discardableResult
+    public mutating func lap() -> Double {
+        let elapsed = elapsed
+        prevTime = getTime()
+        return elapsed
+    }
+}
+
+public struct BufferedTimer: ~Copyable, AnyTimer {
+    public private(set) var inner: Timer = .init()
+    private var buffer: [Double] = .init(repeating: 0, count: 360)
+    public init() {}
+    
+    public var elapsed: Double { buffer.average() }
+    
+    @discardableResult
+    public mutating func lap() -> Double {
+        buffer.removeFirst()
+        buffer.append(inner.lap())
+        return elapsed
+    }
+}
 
 // MARK: - Logging
 

@@ -13,21 +13,25 @@ public typealias CString = [CChar]
 extension Array: @retroactive ExpressibleByUnicodeScalarLiteral where Element == CChar {}
 extension Array: @retroactive ExpressibleByExtendedGraphemeClusterLiteral where Element == CChar {}
 
+extension Array: @retroactive ExpressibleByStringInterpolation where Element == CChar {}
+
 extension Array: @retroactive ExpressibleByStringLiteral where Element == CChar {
-    public init(stringLiteral value: StaticString) {
+    public init(stringLiteral value: Swift.String) {
         self = [CChar]()
-        assert(value.isASCII)
-        value.withUTF8Buffer { ptr in
+//        assert(value.isASCII)
+        var copy = value
+        copy.withUTF8 { ptr in
             self.reserveCapacity(ptr.count + 1)
             for char in ptr { self.append(CChar(char)) }
             self.append(0)
         }
     }
     
-    public init(_ value: StaticString) {
+    public init(_ value: Swift.String) {
         self = []
-        assert(value.isASCII)
-        value.withUTF8Buffer { ptr in
+//        assert(value.isASCII)
+        var copy = value
+        copy.withUTF8 { ptr in
             self.reserveCapacity(ptr.count + 1)
             for char in ptr {
                 self.append(CChar(char))

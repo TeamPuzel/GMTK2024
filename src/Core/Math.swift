@@ -1,7 +1,7 @@
 
 import Builtin
 
-// MARK: - Trigonometry
+// MARK: - Missing functions
 
 public protocol FloatingPointMath: FloatingPoint, Fractional, ExpressibleByFloatLiteral {
     var sin: Self { get }
@@ -51,10 +51,46 @@ public extension BinaryInteger {
         let step2 = step1 * (self - from.upperBound)
         return step2 + to.upperBound
     }
+    
+    func normalized(from: Range<Self>, to: Range<Self>) -> Self {
+        let step1 = (to.upperBound - to.lowerBound) / (from.upperBound - from.lowerBound)
+        let step2 = step1 * (self - from.upperBound)
+        return step2 + to.upperBound
+    }
+    
+    func normalized(from: ClosedRange<Self>, to: Range<Self>) -> Self {
+        let step1 = (to.upperBound - to.lowerBound) / (from.upperBound - from.lowerBound)
+        let step2 = step1 * (self - from.upperBound)
+        return step2 + to.upperBound
+    }
+    
+    func normalized(from: Range<Self>, to: ClosedRange<Self>) -> Self {
+        let step1 = (to.upperBound - to.lowerBound) / (from.upperBound - from.lowerBound)
+        let step2 = step1 * (self - from.upperBound)
+        return step2 + to.upperBound
+    }
 }
 
 public extension FloatingPoint {
     func normalized(from: ClosedRange<Self>, to: ClosedRange<Self>) -> Self {
+        let step1 = (to.upperBound - to.lowerBound) / (from.upperBound - from.lowerBound)
+        let step2 = step1 * (self - from.upperBound)
+        return step2 + to.upperBound
+    }
+    
+    func normalized(from: Range<Self>, to: Range<Self>) -> Self {
+        let step1 = (to.upperBound - to.lowerBound) / (from.upperBound - from.lowerBound)
+        let step2 = step1 * (self - from.upperBound)
+        return step2 + to.upperBound
+    }
+    
+    func normalized(from: ClosedRange<Self>, to: Range<Self>) -> Self {
+        let step1 = (to.upperBound - to.lowerBound) / (from.upperBound - from.lowerBound)
+        let step2 = step1 * (self - from.upperBound)
+        return step2 + to.upperBound
+    }
+    
+    func normalized(from: Range<Self>, to: ClosedRange<Self>) -> Self {
         let step1 = (to.upperBound - to.lowerBound) / (from.upperBound - from.lowerBound)
         let step2 = step1 * (self - from.upperBound)
         return step2 + to.upperBound

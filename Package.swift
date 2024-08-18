@@ -11,6 +11,7 @@ let cSettings: [CSetting] = [
  ]
 
 let swiftSettings: [SwiftSetting] = [
+    .enableExperimentalFeature("Extern"),
     .enableExperimentalFeature("Embedded"),
     .enableExperimentalFeature("SymbolLinkageMarkers"),
     .unsafeFlags([

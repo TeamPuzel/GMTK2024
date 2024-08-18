@@ -16,10 +16,13 @@ typedef unsigned int size_t;
 //__attribute__((import_module("env"), import_name("warn"))) extern void warn(char *string, int len);
 //__attribute__((import_module("env"), import_name("error"))) extern void error(char *string, int len);
 
-extern unsigned char heap;
-void *memory_end;
-
-unsigned int memory_size(void);
-void memory_grow(unsigned int page_count);
+//extern unsigned char heap;
+//void *memory_end;
+//
+//unsigned int memory_size(void);
+//void memory_grow(unsigned int page_count);
 
 //void initialize(void);
+
+void free(void *ptr);
+void * malloc(size_t size);

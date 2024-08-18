@@ -17,7 +17,7 @@ public enum Images {
 }
 
 /// A namespace for built in tile fonts.
-public struct TileFonts {
+public enum TileFonts {
     public static let pico =
         TileFont(
             source: UnsafeTGAPointer(PICOFONT_TGA),
