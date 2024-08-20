@@ -168,6 +168,15 @@ final class Floor {
         entities.insert(entity)
     }
     
+    func weakAdd(_ entity: Entity, x: Int, y: Int) {
+        guard x >= 0 && x < Self.width && y >= 0 && y < Self.height else { return }
+        guard self[x, y] is Ground else { return }
+        guard !entities.contains(where: { $0.x == x && $0.y == y }) else { return }
+        
+        (entity.x, entity.y) = (x, y)
+        self.add(entity)
+    }
+    
     @discardableResult
     func remove(_ entity: Entity) -> Entity {
         entities.remove(entity)!

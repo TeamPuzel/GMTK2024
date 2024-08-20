@@ -63,6 +63,7 @@ class Entity: Drawable {
     func die(from entity: Entity) {
         if self.isPrimary {
             floor.world.log("You are dead", color: .Pico.red, duration: 999999)
+            floor.world.primaryAiming = nil
             let grave = Grave()
             grave.position = self.position
             floor.add(grave)
@@ -77,9 +78,9 @@ class Entity: Drawable {
     func interact(_ entity: Entity) {
         let damage = Int.random(in: entity.attack)
         if self.isPrimary {
-            floor.world.log("You take \(damage) damage from " + (entity === floor.world.primary ? "You" : entity.name))
+            floor.world.log("You take \(damage) damage from " + (entity.isPrimary ? "You" : entity.name))
         } else {
-            floor.world.log(name + " takes \(damage) damage from " + (entity === floor.world.primary ? "You" : entity.name))
+            floor.world.log(name + " takes \(damage) damage from " + (entity.isPrimary ? "You" : entity.name))
         }
         self.health -= damage
         
@@ -87,7 +88,7 @@ class Entity: Drawable {
             self.die(from: entity)
             
             if experienceValue > 0 && entity.isPrimary {
-                floor.world.log((entity === floor.world.primary ? "You gain" : entity.name + " gains") + " \(experienceValue) experience")
+                floor.world.log((entity.isPrimary ? "You gain" : entity.name + " gains") + " \(experienceValue) experience")
                 entity.experience += experienceValue
             }
         }
@@ -295,7 +296,7 @@ class SkeletonKing: Skeleton {
     override subscript(x: Int, y: Int) -> Color { Self.sheet[1, 3][x, y] }
     
     override func die(from entity: Entity) {
-        floor.add(Amulet(x: x, y: y))
+        if !self.isPrimary { floor.add(Amulet(x: x, y: y)) }
         storageItem = nil
         super.die(from: entity)
     }
@@ -317,8 +318,8 @@ class Equippable: Item {
     
     func equip(by creature: Creature) throws(EquipError) {
         self.equippedBy = creature
-        if creature == creature.floor.world.primary { creature.floor.world.log("You equip " + name) }
-        floor.remove(self)
+        if creature.isPrimary { creature.floor.world.log("You equip " + name) }
+        if floor.entities.contains(self) { floor.remove(self) }
     }
     
     @discardableResult
@@ -326,7 +327,7 @@ class Equippable: Item {
         let creature = self.equippedBy!
         (self.x, self.y) = (creature.x, creature.y)
         creature.floor.add(self)
-        if creature == creature.floor.world.primary { floor.world.log("You unequip " + name) }
+        if creature.isPrimary { floor.world.log("You unequip " + name) }
         
         self.equippedBy = nil
         return self
@@ -392,12 +393,13 @@ class Scroll: Usable {
     }
     
     static func random(x: Int, y: Int) -> Scroll {
-        switch Int.random(in: 1...5) {
+        switch Int.random(in: 1...6) {
             case 1: FireScroll(x: x, y: y)
             case 2: SwapScroll(x: x, y: y)
             case 3: HealthScroll(x: x, y: y)
             case 4: PositionScroll(x: x, y: y)
             case 5: SlimeScroll(x: x, y: y)
+            case 6: SlimeChaosScroll(x: x, y: y)
                 
             case _: fatalError()
         }
@@ -459,6 +461,19 @@ class PositionScroll: Scroll {
         let pos = entity.floor.world.primary.position
         entity.floor.world.primary.position = entity.position
         entity.position = pos
+    }
+}
+
+class SlimeChaosScroll: Scroll {
+    override var name: String { "Scroll of Slime Chaos" }
+    
+    override func performAimed(on entity: Entity) {
+        let (x, y) = (entity.x, entity.y)
+        
+        entity.floor.weakAdd(Slime(), x: x + 1, y: y)
+        entity.floor.weakAdd(Slime(), x: x - 1, y: y)
+        entity.floor.weakAdd(Slime(), x: x, y: y + 1)
+        entity.floor.weakAdd(Slime(), x: x, y: y - 1)
     }
 }
 
