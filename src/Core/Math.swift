@@ -14,6 +14,17 @@ public protocol FloatingPointMath: FloatingPoint, Fractional, ExpressibleByFloat
 public extension FloatingPointMath {
     func clamped(to range: ClosedRange<Self>) -> Self { max(range.lowerBound, min(self, range.upperBound)) }
     mutating func clamp(to range: ClosedRange<Self>) { self = self.clamped(to: range) }
+    
+    func clamped(to range: Range<Self>) -> Self { max(range.lowerBound, min(self, range.upperBound)) }
+    mutating func clamp(to range: Range<Self>) { self = self.clamped(to: range) }
+}
+
+public extension BinaryInteger {
+    func clamped(to range: ClosedRange<Self>) -> Self { max(range.lowerBound, min(self, range.upperBound)) }
+    mutating func clamp(to range: ClosedRange<Self>) { self = self.clamped(to: range) }
+    
+    func clamped(to range: Range<Self>) -> Self { max(range.lowerBound, min(self, range.upperBound)) }
+    mutating func clamp(to range: Range<Self>) { self = self.clamped(to: range) }
 }
 
 extension Float32: FloatingPointMath {

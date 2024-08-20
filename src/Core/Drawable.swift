@@ -65,6 +65,7 @@ extension Color {
     public static let black = Self(luminosity: 0)
     public static let white = Self(luminosity: 255)
     
+    /// My personal color palette.
     public enum Strawberry {
         public static let red    = Color(r: 214, g: 95,  b: 118)
         public static let banana = Color(r: 230, g: 192, b: 130)
@@ -81,6 +82,7 @@ extension Color {
         public static let black = Color(r: 15,  g: 15,  b: 15 )
     }
     
+    /// The Pico-8 color palette.
     public enum Pico {
         public static let black      = Color(r: 0,   g: 0,   b: 0  )
         public static let darkBlue   = Color(r: 29,  g: 43,  b: 83 )
@@ -98,6 +100,47 @@ extension Color {
         public static let lavender   = Color(r: 131, g: 118, b: 156)
         public static let pink       = Color(r: 255, g: 119, b: 168)
         public static let peach      = Color(r: 255, g: 204, b: 170)
+        
+        static subscript(index: Int) -> Color { fatalError() }
+    }
+    
+    /// The Picotron color palette.
+    public enum Picotron {
+        public static var black:      Color { .Pico.black      }
+        public static var darkBlue:   Color { .Pico.darkBlue   }
+        public static var darkPurple: Color { .Pico.darkPurple }
+        public static var darkGreen:  Color { .Pico.darkGreen  }
+        public static var brown:      Color { .Pico.brown      }
+        public static var darkGray:   Color { .Pico.darkGray   }
+        public static var lightGray:  Color { .Pico.lightGray  }
+        public static var white:      Color { .Pico.white      }
+        public static var red:        Color { .Pico.red        }
+        public static var orange:     Color { .Pico.orange     }
+        public static var yellow:     Color { .Pico.yellow     }
+        public static var green:      Color { .Pico.green      }
+        public static var lightBlue:  Color { .Pico.blue       }
+        public static var lavender:   Color { .Pico.lavender   }
+        public static var pink:       Color { .Pico.pink       }
+        public static var peach:      Color { .Pico.peach      }
+        
+        public static let blue        = Color(r: 48,  g: 93,  b: 166)
+        public static let teal        = Color(r: 73,  g: 162, b: 160)
+        public static let violet      = Color(r: 111, g: 80,  b: 147)
+        public static let darkTeal    = Color(r: 32,  g: 82,  b: 88 )
+        public static let darkBrown   = Color(r: 108, g: 51,  b: 44 )
+        public static let umber       = Color(r: 69,  g: 46,  b: 56 )
+        public static let gray        = Color(r: 158, g: 137, b: 123)
+        public static let lightPink   = Color(r: 243, g: 176, b: 196)
+        public static let crimson     = Color(r: 179, g: 37,  b: 77 )
+        public static let darkOrange  = Color(r: 219, g: 114, b: 44 )
+        public static let lime        = Color(r: 165, g: 234, b: 95 )
+        public static let darkLime    = Color(r: 79,  g: 175, b: 92 )
+        public static let sky         = Color(r: 133, g: 220, b: 243)
+        public static let lightViolet = Color(r: 183, g: 155, b: 218)
+        public static let magenta     = Color(r: 208, g: 48,  b: 167)
+        public static let darkPeach   = Color(r: 239, g: 139, b: 116)
+        
+        static subscript(index: Int) -> Color { fatalError() }
     }
 }
 
@@ -160,6 +203,24 @@ public extension Drawable {
     }
 }
 
+// MARK: - Safe access
+
+//public extension Drawable {
+//    @_disfavoredOverload
+//    subscript(x: Int, y: Int) -> Color? {
+//        x >= 0 && x < width && y >= 0 && y < height
+//            ? self[x, y]
+//            : nil
+//    }
+//    
+//    @_disfavoredOverload
+//    subscript(startX sx: Int, startY sy: Int, x x: Int, y y: Int) -> Color? {
+//        x >= sx && x < width - sx && y >= sy && y < height - sy
+//            ? self[x, y]
+//            : nil
+//    }
+//}
+
 // MARK: - Slicing
 
 public extension Drawable {
@@ -168,15 +229,25 @@ public extension Drawable {
         .init(self, x: x, y: y, width: width, height: height)
     }
     
+    /// Creates a lazy slice of the drawable.
+    func slice(width: Int, height: Int) -> DrawableSlice<Self> {
+        .init(self, x: 0, y: 0, width: width, height: height)
+    }
+    
     /// Creates a lazy grid from the drawable.
     func grid(itemWidth: Int, itemHeight: Int) -> DrawableGrid<Self> {
         .init(self, itemWidth: itemWidth, itemHeight: itemHeight)
     }
     
-    /// Creates a lazy square grid from the drawable.
-    func grid(itemSide: Int) -> SquareDrawableGrid<Self> {
-        .init(self, itemSide: itemSide)
+    /// Creates a lazy grid from the drawable.
+    func grid(itemSide: Int) -> DrawableGrid<Self> {
+        .init(self, itemWidth: itemSide, itemHeight: itemSide)
     }
+    
+//    /// Creates a lazy square grid from the drawable.
+//    func grid(itemSide: Int) -> SquareDrawableGrid<Self> {
+//        .init(self, itemSide: itemSide)
+//    }
 }
 
 /// A lazy 2d slice of another abstract `Drawable`, and a `Drawable` in itself.
@@ -232,27 +303,99 @@ public struct DrawableGrid<Inner: Drawable>: Drawable {
 
 extension DrawableGrid: Sendable where Inner: Sendable {}
 
-/// A lazy grid of equal size `Drawable` slices, for example a sprite sheet, tile map or tile font.
-/// It is a more lightweight variant of `DrawableGrid` optimised for storing square items.
-public struct SquareDrawableGrid<Inner: Drawable>: Drawable {
-    public let inner: Inner
-    public var width: Int { inner.width }
-    public var height: Int { inner.height }
-    public let itemSide: Int
-    
-    public init(_ inner: Inner, itemSide: Int) {
-        self.inner = inner
-        self.itemSide = itemSide
+///// A lazy grid of equal size `Drawable` slices, for example a sprite sheet, tile map or tile font.
+///// It is a more lightweight variant of `DrawableGrid` optimised for storing square items.
+//public struct SquareDrawableGrid<Inner: Drawable>: Drawable {
+//    public let inner: Inner
+//    public var width: Int { inner.width }
+//    public var height: Int { inner.height }
+//    public let itemSide: Int
+//    
+//    public init(_ inner: Inner, itemSide: Int) {
+//        self.inner = inner
+//        self.itemSide = itemSide
+//    }
+//    
+//    @_disfavoredOverload
+//    public subscript(x: Int, y: Int) -> Color { inner[x, y] }
+//    public subscript(x: Int, y: Int) -> DrawableSlice<Inner> {
+//        inner.slice(x: x * itemSide, y: y * itemSide, width: itemSide, height: itemSide)
+//    }
+//}
+//
+//extension SquareDrawableGrid: Sendable where Inner: Sendable {}
+
+// MARK: - Animation
+
+public extension DrawableGrid {
+    func animation(startX: Int, y: Int, count: Int) -> Animation<Inner> {
+        .init(self, startX: startX, y: y, count: count)
     }
     
-    @_disfavoredOverload
-    public subscript(x: Int, y: Int) -> Color { inner[x, y] }
-    public subscript(x: Int, y: Int) -> DrawableSlice<Inner> {
-        inner.slice(x: x * itemSide, y: y * itemSide, width: itemSide, height: itemSide)
+    func animation(x: Int, y: Int, advancement: @escaping ComputedAnimation.Advancement) -> ComputedAnimation<Inner> {
+        .init(self, x: x, y: y, advancement: advancement)
     }
 }
 
-extension SquareDrawableGrid: Sendable where Inner: Sendable {}
+/// A drawable which rotates through a grid horizontally and wraps around.
+public struct Animation<Inner: Drawable>: Drawable {
+    public let innerGrid: DrawableGrid<Inner>
+    public var width: Int { innerGrid.itemWidth }
+    public var height: Int { innerGrid.itemHeight }
+    
+    private let frameCount: Int
+    public let startX: Int
+    
+    public var frame: Int = 0 { didSet { frame.clamp(to: 0..<frameCount) } }
+    public var x: Int { startX + frame }
+    public let y: Int
+    
+    init(_ grid: DrawableGrid<Inner>, startX: Int, y: Int, count: Int) {
+        self.innerGrid = grid
+        self.startX = startX
+        self.y = y
+        self.frameCount = count
+    }
+    
+    public var current: DrawableSlice<Inner> { innerGrid[x, y] }
+    
+    public mutating func advance() {
+        frame = frame + 1 == frameCount
+            ? 0
+            : frame + 1
+    }
+    
+    public subscript(x: Int, y: Int) -> Color { current[x, y] }
+}
+
+/// A drawable which rotates through a grid through a custom rule.
+public struct ComputedAnimation<Inner: Drawable>: Drawable {
+    public let innerGrid: DrawableGrid<Inner>
+    public private(set) var x: Int
+    public private(set) var y: Int
+    public var width: Int { innerGrid.itemWidth }
+    public var height: Int { innerGrid.itemHeight }
+    private let advancement: Advancement
+    public private(set) var frame: Int = 0
+    
+    init(_ grid: DrawableGrid<Inner>, x: Int, y: Int, advancement: @escaping Advancement) {
+        self.innerGrid = grid
+        self.x = x
+        self.y = y
+        self.advancement = advancement
+    }
+    
+    public var current: DrawableSlice<Inner> { innerGrid[x, y] }
+    
+    public mutating func advance() { (self.x, self.y) = advancement(x, y, &frame) }
+    
+    public subscript(x: Int, y: Int) -> Color { current[x, y] }
+    
+    public typealias Advancement = (_ x: Int, _ y: Int, _ frame: inout Int) -> (x: Int, y: Int)
+}
+
+// Closures strike again...
+//extension ComputedAnimation: Sendable where Inner: Sendable {}
 
 // MARK: - Mapping
 
@@ -425,8 +568,6 @@ public extension InfiniteDrawable {
 /// A `Drawable` which can be rendered into, derives useful rendering functionality.
 public protocol MutableDrawable: Drawable {
     subscript(x: Int, y: Int) -> Color { get set }
-    
-    mutating func pixel(_ color: Color, x: Int, y: Int, blendMode: Color.BlendMode)
 }
 
 public extension MutableDrawable {
@@ -437,7 +578,7 @@ public extension MutableDrawable {
     /// - It applies a blending function to the drawing operation.
     // TODO(!): Drop the safety check here and move it to `draw`
     mutating func pixel(_ color: Color, x: Int, y: Int, blendMode: Color.BlendMode = .normal) {
-        if x < 0 || y < 0 || x >= width || y >= height { return }
+//        if x < 0 || y < 0 || x >= width || y >= height { return }
         self[x, y] = self[x, y].blend(with: color, blendMode)
     }
     
@@ -468,6 +609,7 @@ public extension MutableDrawable {
         }
     }
     
+    // TODO(!!): Reenable once the unpleasant override edge case is fixed.
     mutating func draw(_ drawable: some OptimizedDrawable, x: Int, y: Int, blendMode: Color.BlendMode = .normal) {
         drawable.draw(into: &self, x: x, y: y, blendMode: blendMode)
     }
@@ -475,6 +617,25 @@ public extension MutableDrawable {
     mutating func draw(_ drawable: some OptimizedDrawable, blendMode: Color.BlendMode = .normal) {
         drawable.draw(into: &self, x: 0, y: 0, blendMode: blendMode)
     }
+    
+    // TODO(!!!): Origin for drawing, not just top left.
+//    @_disfavoredOverload
+//    mutating func draw(_ drawable: some Drawable, x: Int, y: Int, blendMode: Color.BlendMode = .normal) {
+//        for ix in 0..<drawable.width {
+//            for iy in 0..<drawable.height {
+//                self.pixel(drawable[ix, iy], x: ix + x, y: iy + y, blendMode: blendMode)
+//            }
+//        }
+//    }
+//    
+//    @_disfavoredOverload
+//    mutating func draw(_ drawable: some Drawable, blendMode: Color.BlendMode = .normal) {
+//        for ix in 0..<drawable.width {
+//            for iy in 0..<drawable.height {
+//                self.pixel(drawable[ix, iy], x: ix, y: iy, blendMode: blendMode)
+//            }
+//        }
+//    }
     
     mutating func text(
         _ string: String,
@@ -542,25 +703,28 @@ public extension MutableDrawable {
         .init(overlaying: self, x: x, y: y)
     }
     
+    /// Convenience for mutating the drawable at an offset.
     @_transparent
     mutating func withOverlay<E, Result>(
         x: Int, y: Int, _ body: (_ overlay: inout MutableDrawableOverlay) throws(E) -> Result
     ) throws(E) -> Result where E: Error {
         var overlay = self.overlay(x: x, y: y)
         let result = try body(&overlay)
-        self.draw(overlay)
+        self.apply(overlay)
         return result
+    }
+    
+    /// Apply an overlay to the drawable.
+    mutating func apply(_ overlay: MutableDrawableOverlay) {
+        self.draw(overlay.inner)
     }
 }
 
 /// This type is analogus to a `Slice` for `Drawable`, in that it describes offset mutation. Since drawables are
 /// copyable value types it is impossible to make a safe `MutableSlice` that points to and mutates the original.
 /// Instead you create an empty overlay which accumulates a difference to be applied to the original.
-///
-/// - Warning: Never use this type as runtime `any MutableDrawable` because it will cut off the image. It must be
-/// able to use its customized `pixel` method which skips the usual bounds checking.
 public struct MutableDrawableOverlay: MutableDrawable {
-    private var inner: Image
+    public private(set) var inner: Image
     public let x: Int
     public let y: Int
     public var width: Int { inner.width }
@@ -573,12 +737,8 @@ public struct MutableDrawableOverlay: MutableDrawable {
     }
     
     public subscript(x: Int, y: Int) -> Color {
-        get { inner[x, y] }
-        set { inner.pixel(newValue, x: x + self.x, y: y + self.y) }
-    }
-    
-    public mutating func pixel(_ color: Color, x: Int, y: Int, blendMode: Color.BlendMode = .normal) {
-        self[x, y] = color
+        get { inner[x - self.x, y - self.y] }
+        set { inner.pixel(newValue, x: x - self.x, y: y - self.y, blendMode: .binary) }
     }
 }
 
@@ -724,7 +884,8 @@ public struct Image: PrimitiveDrawable, MutableDrawable, Sendable {
     /// - Returns: `true` if the image was resized, `false` if provided dimensions were identical.
     ///
     /// When the image size is unchanged no reallocation is performed.
-    @discardableResult public mutating func resize(width: Int, height: Int) -> Bool {
+    @discardableResult
+    public mutating func resize(width: Int, height: Int) -> Bool {
         guard width != self.width || height != self.height else { return false }
         var new = Image(width: width, height: height)
         new.draw(self, x: 0, y: 0)
@@ -733,8 +894,15 @@ public struct Image: PrimitiveDrawable, MutableDrawable, Sendable {
     }
     
     public subscript(x: Int, y: Int) -> Color {
-        get { data[x + y * width] }
-        set { data[x + y * width] = newValue }
+        get {
+            x < 0 || y < 0 || x >= width || y >= height
+                ? .clear
+                : data[x + y * width]
+        }
+        set {
+            if x < 0 || y < 0 || x >= width || y >= height { return }
+            data[x + y * width] = newValue
+        }
     }
 }
 
@@ -1023,7 +1191,7 @@ public struct Text: Drawable {
             width: string.count * (font.inner.itemWidth + font.spacing) - font.spacing,
             height: font.inner.itemHeight
         )
-        image.text(string, x: 0, y: 0, color: color, font: font)
+        image.text(string, x: 0, y: 0, color: color, font: font, blendMode: .binary)
         self.image = image
     }
     
@@ -1075,6 +1243,26 @@ extension Rectangle: Sendable {}
 // MARK: - Modifiers
 
 public extension Drawable {
+    func border() -> Border<Self> {
+//        .init()
+        fatalError()
+    }
+}
+
+public struct Border<Inner: Drawable>: Drawable {
+    public let inner: Inner
+    public var width: Int { inner.width + 2 }
+    public var height: Int { inner.height + 2 }
+    public let color: Color
+    
+    public subscript(x: Int, y: Int) -> Color {
+        x == 0 || y == 0 || x == width - 1 || y == height - 1
+            ? color
+            : inner[x + 1, y + 1]
+    }
+}
+
+public extension Drawable {
     func frame(width: Int? = nil, height: Int? = nil) -> Frame<Self> {
         .init(self, width: width ?? self.width, height: height ?? self.height)
     }
@@ -1110,6 +1298,7 @@ public extension Drawable {
     }
 }
 
+// TODO(!!!!!!): This could be an optimized drawable.
 public struct Padding<Inner: Drawable>: Drawable {
     public let inner: Inner
     public let edges: Edges
@@ -1137,17 +1326,17 @@ public struct Padding<Inner: Drawable>: Drawable {
         }
     }
     
-    // TODO(!!): Branching in a subscript? Find a way to optimize this.
+    // TODO(!!!!!!!!!!!!!): Branching in a subscript? Find a way to optimize this.
     public subscript(x: Int, y: Int) -> Color {
         // TODO(!): Compute the correct offsets!
-        fatalError()
+//        fatalError()
         
-//        let (offsetX, offsetY) = ((width - inner.width) / 2, (height - inner.height) / 2)
-//        if x >= offsetX && y >= offsetY && x < offsetX + inner.width && y < offsetY + inner.height {
-//            return inner[x - offsetX, y - offsetY]
-//        } else {
-//            return .clear
-//        }
+        let (offsetX, offsetY) = ((width - inner.width) / 2, (height - inner.height) / 2)
+        if x >= offsetX && y >= offsetY && x < offsetX + inner.width && y < offsetY + inner.height {
+            return inner[x - offsetX, y - offsetY]
+        } else {
+            return .clear
+        }
     }
 }
 
@@ -1179,7 +1368,7 @@ public struct Edges: OptionSet, Sendable, BitwiseCopyable {
 ///
 /// Because it only bundles drawables together and carries no additional information it is not
 /// `Drawable` itself. A drawable like `VStack` is required to provide the information
-/// required to know how to draw it. Its main purpose is to serve as a building block
+/// needed to know how to draw it. Its main purpose is to serve as a building block
 /// for the `DrawableBuilder` enabling composability of recursive drawables.
 public struct DrawableTuple<each D: Drawable> {
     public let drawables: (repeat each D)
@@ -1231,7 +1420,7 @@ public struct ClickProcessing<Inner: Drawable>: ProcessingDrawable {
     
     public func process(input: Input, x: Int, y: Int) {
         guard let mouse = input.mouse else { return }
-        if mouse.x >= x && mouse.x < x + width && mouse.y >= y && mouse.y < y + height && mouse.left {
+        if mouse.x >= x && mouse.x < x + width && mouse.y >= y && mouse.y < y + height && input.leftClick {
             click()
         }
     }

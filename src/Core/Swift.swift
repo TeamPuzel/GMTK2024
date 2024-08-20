@@ -23,7 +23,7 @@ extension Array: @retroactive ExpressibleByStringLiteral where Element == CChar 
         copy.withUTF8 { ptr in
             self.reserveCapacity(ptr.count + 1)
             for char in ptr { self.append(CChar(char)) }
-            self.append(0)
+//            self.append(0)
         }
     }
     
@@ -36,7 +36,7 @@ extension Array: @retroactive ExpressibleByStringLiteral where Element == CChar 
             for char in ptr {
                 self.append(CChar(char))
             }
-            self.append(0)
+//            self.append(0)
         }
     }
 }
@@ -45,10 +45,12 @@ extension CChar: @retroactive ExpressibleByUnicodeScalarLiteral {}
 extension CChar: @retroactive ExpressibleByExtendedGraphemeClusterLiteral {}
 
 extension CChar: @retroactive ExpressibleByStringLiteral {
+    @_disfavoredOverload
     public init(stringLiteral value: StaticString) {
-        assert(value.isASCII)
+        precondition(value.isASCII)
         self.init()
         value.withUTF8Buffer { ptr in
+            precondition(ptr.count == 1)
             self = Int8(bitPattern: ptr.first!)
         }
     }
